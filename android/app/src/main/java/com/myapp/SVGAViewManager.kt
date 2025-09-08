@@ -1,6 +1,5 @@
 package com.myapp
 
-import android.view.View
 import androidx.annotation.NonNull
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.uimanager.SimpleViewManager
@@ -24,13 +23,20 @@ class SVGAViewManager(private val reactContext: ReactApplicationContext) : Simpl
     @NonNull
     override fun createViewInstance(@NonNull reactContext: ThemedReactContext): SVGAImageView {
         return SVGAImageView(reactContext).apply {
-            loops = 0 // Infinite by default
+            loops = 0 // infinite by default
         }
     }
 
     @ReactProp(name = "source")
     fun setSource(view: SVGAImageView, source: String) {
         try {
+            // Stop previous animation & sound immediately
+            if (view.isAnimating) {
+                view.stopAnimation()
+                view.clear() // stops sound & frees memory
+            }
+
+            // Load new animation immediately
             if (source.startsWith("http")) {
                 parser.decodeFromURL(URL(source), object : SVGAParser.ParseCompletion {
                     override fun onComplete(videoItem: com.opensource.svgaplayer.SVGAVideoEntity) {
@@ -48,6 +54,7 @@ class SVGAViewManager(private val reactContext: ReactApplicationContext) : Simpl
                     override fun onError() {}
                 })
             }
+
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -61,5 +68,14 @@ class SVGAViewManager(private val reactContext: ReactApplicationContext) : Simpl
     @ReactProp(name = "autoplay", defaultBoolean = true)
     fun setAutoplay(view: SVGAImageView, autoplay: Boolean) {
         if (autoplay) view.startAnimation()
+    }
+
+    // Stop animation & sound when view is detached
+    override fun onDropViewInstance(view: SVGAImageView) {
+        super.onDropViewInstance(view)
+        if (view.isAnimating) {
+            view.stopAnimation()
+            view.clear() // stops sound & clears memory
+        }
     }
 }
